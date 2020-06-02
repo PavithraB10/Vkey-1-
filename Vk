@@ -1,0 +1,58 @@
+import cv2
+import numpy as np
+from datetime import datetime
+
+
+key =np.array(['!','@','#','$','%','^','&','*','(',')','1','2','3','4','5','6','7','8','9','0','Q','W','E','R','T','Y','U','I','O','P','A','S','D','F','G','H','J','K','L','\n','Z','X','C','V','B','N','M',' ',' ','shift',':',';','"',"'",',','.','<','>','/','?'])
+cam=cv2.VideoCapture(0)
+fgbg=cv2.bgsegm.createBackgroundSubtractorMOG(
+ret,frame=cam.read()
+x= 300
+y=100
+width=50
+height = 50
+roi = frame[y:y-height, x : x+width]
+track_window = (x, y ,width, height)
+hsv_roi = cv.cvtColor(roi, cv.COLOR_BGR2HSV)
+mask = cv.inRange(hsv_roi, np.array((0, 0, 0.)), np.array((180., 255., 30)))
+roi_hist = cv.calcHist([hsv_roi], [0], mask, [180], [0, 180])
+cv.normalize(roi_hist, roi_hist, 0, 255,cv.NORM_MINMAX)
+term_crit = ( cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 1)
+cv.imshow('roi',roi)
+
+
+while (cam.isOpened()):
+    ret,frame=cam.read()
+
+    #cv2.circle(frame, (200,100),5,(0,0,255),-1)
+    #cv2.circle(frame, (500, 100), 5, (0, 0, 255), -1)
+    #cv2.circle(frame, (170, 300), 5, (0, 0, 255), -1)
+    #cv2.circle(frame, (500, 300), 5, (0, 0, 255), -1)
+
+
+    pts1 = np.float32(([200,100], [500,100], [170,300], [500,300]))
+    pts2 = np.float32(([0, 0], [1280, 0], [0, 720], [1280, 720]))
+    matrix = cv2.getPerspectiveTransform(pts1, pts2)
+    result = cv2.warpPerspective(frame, matrix, (1280, 720))
+    if ret == True:
+        hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+        dst = cv.calcBackProject([hsv], [0], roi_hist, [0, 180], 1)
+
+        ret, track_window = cv.CamShift(dst, track_window, term_crit)
+
+
+        pts = cv.boxPoints(ret)
+
+        pts = np.int0(pts)
+        final_image = cv.polylines(frame, [pts], True, (0, 255, 0), 2)
+
+
+        cv.imshow('final_image', final_image)
+
+
+    cv2.imshow('res', result)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+         break
+
+cap.release()
+cv2.destroyAllWindows()
